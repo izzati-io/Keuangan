@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplikasi Keuangan Pribadi</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f8ff;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #4caf50;
+      color: white;
+      padding: 10px 20px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .container {
+      padding: 20px;
+    }
+    .section {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .section h2 {
+      color: #4caf50;
+      margin-bottom: 10px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      background: #4caf50;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .table-container {
+      margin-top: 20px;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      text-align: left;
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background: #4caf50;
+      color: white;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+  </style>
+</head>
+<body>
+  <header>Aplikasi Keuangan Pribadi</header>
+  <div class="container">
+    <div class="section">
+      <h2>Form Pemasukan & Pengeluaran</h2>
+      <label for="date">Tanggal:</label>
+      <input type="date" id="date">
+      <label for="time">Jam:</label>
+      <input type="time" id="time">
+      <label for="type">Jenis Transaksi:</label>
+      <select id="type">
+        <option value="pemasukan">Pemasukan</option>
+        <option value="pengeluaran">Pengeluaran</option>
+      </select>
+      <label for="amount">Nominal (Rp):</label>
+      <input type="number" id="amount" min="0" step="1000">
+      <button id="add-transaction">Tambah Transaksi</button>
+    </div>
+    <div class="section">
+      <h2>Daftar Transaksi</h2>
+      <div class="table-container">
+        <table id="transaction-table">
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Jam</th>
+              <th>Jenis</th>
+              <th>Nominal (Rp)</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Data akan ditambahkan secara dinamis -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="section">
+      <h2>Tabungan</h2>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Bank</th>
+              <th>Saldo (Rp)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>BRI</td>
+              <td id="bri-balance">0</td>
+            </tr>
+            <tr>
+              <td>Muamalat</td>
+              <td id="muamalat-balance">0</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <label for="bank">Pilih Bank:</label>
+      <select id="bank">
+        <option value="bri">BRI</option>
+        <option value="muamalat">Muamalat</option>
+      </select>
+      <label for="bank-amount">Nominal (Rp):</label>
+      <input type="number" id="bank-amount" min="0" step="1000">
+      <button id="deposit">Setor</button>
+      <button id="withdraw">Tarik</button>
+    </div>
+    <div class="action-buttons">
+      <button id="export-pdf">Simpan sebagai PDF</button>
+      <button id="share">Bagikan</button>
+      <button id="clear-data">Hapus Data</button>
+    </div>
+  </div>
+
+  <script>
+    let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+    let balances = JSON.parse(localStorage.getItem("balances")) || { bri: 0, muamalat: 0 };
+
+    const saveData = () => {
+      localStorage.setItem("transactions", JSON.stringify(transactions));
+      localStorage.setItem("balances", JSON.stringify(balances));
+    };
+
+    const updateTransactionTable = () => {
+      const tableBody = document.querySelector("#transaction-table tbody");
+      tableBody.innerHTML = "";
+      transactions.forEach((transaction, index) => {
+        const row = `<tr>
+          <td>${transaction.date}</td>
+          <td>${transaction.time}</td>
+          <td>${transaction.type}</td>
+          <td>${transaction.amount.toLocaleString("id-ID")}</td>
+          <td><button onclick="deleteTransaction(${index})">Hapus</button></td>
+        </tr>`;
+        tableBody.innerHTML += row;
+      });
+    };
+
+    const updateBalances = () => {
+      document.getElementById("bri-balance").innerText = balances.bri.toLocaleString("id-ID");
+      document.getElementById("muamalat-balance").innerText = balances.muamalat.toLocaleString("id-ID");
+    };
+
+    document.getElementById("add-transaction").addEventListener("click", () => {
+      const date = document.getElementById("date").value;
+      const time = document.getElementById("time").value;
+      const type = document.getElementById("type").value;
+      const amountInput = document.getElementById("amount");
+      const amount = parseInt(amountInput.value);
+
+      if (!date || !time || isNaN(amount)) return alert("Semua kolom harus diisi!");
+
+      transactions.push({ date, time, type, amount });
+      saveData();
+      updateTransactionTable();
+
+      amountInput.value = ""; // Kosongkan kolom input angka
+    });
+
+    document.getElementById("deposit").addEventListener("click", () => {
+      const bank = document.getElementById("bank").value;
+      const amountInput = document.getElementById("bank-amount");
+      const amount = parseInt(amountInput.value);
+      if (isNaN(amount)) return alert("Masukkan nominal valid!");
+      balances[bank] += amount;
+      saveData();
+      updateBalances();
+
+      amountInput.value = ""; // Kosongkan kolom input angka
+    });
+
+    document.getElementById("withdraw").addEventListener("click", () => {
+      const bank = document.getElementById("bank").value;
+      const amountInput = document.getElementById("bank-amount");
+      const amount = parseInt(amountInput.value);
+      if (isNaN(amount) || balances[bank] < amount) return alert("Saldo tidak mencukupi!");
+      balances[bank] -= amount;
+      saveData();
+      updateBalances();
+
+      amountInput.value = ""; // Kosongkan kolom input angka
+    });
+
+    const deleteTransaction = (index) => {
+      transactions.splice(index, 1);
+      saveData();
+      updateTransactionTable();
+    };
+
+    document.getElementById("clear-data").addEventListener("click", () => {
+      if (confirm("Apakah Anda yakin ingin menghapus semua data?")) {
+        transactions = [];
+        balances = { bri: 0, muamalat: 0 };
+        saveData();
+        updateTransactionTable();
+        updateBalances();
+      }
+    });
+
+    updateTransactionTable();
+    updateBalances();
+  </script>
+</body>
+</html>
